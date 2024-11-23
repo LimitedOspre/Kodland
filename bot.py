@@ -149,11 +149,20 @@ async def rozkład(ctx, slowo: str):
     }
     await ctx.send(f"{slowo} rozkłada się nawet {rozkłady[slowo]}")
 
+@bot.command()
+@commands.has_permissions(manage_messages=True)
+async def dell(ctx, liczba: int = 1):
+    liczba += 1
+    messages = [message async for message in ctx.channel.history(limit=liczba)]
 
+    for message in messages:
+        await message.delete()
+    
+    await ctx.send(f"Usunięto {liczba - 1} wiadomości.", delete_after=3)
 
 @bot.command()
 async def helpp(ctx):
-        await ctx.send("```𝙭 - 𝙡𝙞𝙘𝙯𝙗𝙖 𝙥𝙤𝙙𝙖𝙣𝙖 𝙥𝙧𝙯𝙚𝙯 𝙪ż𝙮𝙩𝙠𝙤𝙬𝙣𝙞𝙠𝙖\n__helpp - tablica komend\n__Hello - hello!\n__żaba - 🐸🐸🐸🐸🐸\n__kot - 🐱\n__oblicz x + x - Suma\n__oblicz x - x - Różnica\n__oblicz x * x - iloczyn\n__oblicz x / x - iloraz\n__emotka kot lub żaba lub długopis lub banknot x - 🐱 x razy lub 🐸 x razy lub 🖊️ x razy lub 💵 x razy\n__los, x - losowa emotka x razy z listy pod __lista\n__lista - lista emotek\n__duck - losowe zdięcie kaczki\n__dog - losowe zdięcie psa\n__los_obraz - losowy obraz\n__pomysł_plastyczny - losowy pomysł plastyczny\n__odpad - bot wskarze ci gdzie wyrzucić odpad\n__rozkład - czas jaki rozkłada się dana rzecz```")
+        await ctx.send("```𝙭 - 𝙡𝙞𝙘𝙯𝙗𝙖 𝙥𝙤𝙙𝙖𝙣𝙖 𝙥𝙧𝙯𝙚𝙯 𝙪ż𝙮𝙩𝙠𝙤𝙬𝙣𝙞𝙠𝙖\n__helpp - tablica komend\n__Hello - hello!\n__żaba - 🐸🐸🐸🐸🐸\n__kot - 🐱\n__oblicz x + x - Suma\n__oblicz x - x - Różnica\n__oblicz x * x - iloczyn\n__oblicz x / x - iloraz\n__emotka kot lub żaba lub długopis lub banknot x - 🐱 x razy lub 🐸 x razy lub 🖊️ x razy lub 💵 x razy\n__los, x - losowa emotka x razy z listy pod __lista\n__lista - lista emotek\n__duck - losowe zdięcie kaczki\n__dog - losowe zdięcie psa\n__los_obraz - losowy obraz\n__pomysł_plastyczny - losowy pomysł plastyczny\n__odpad - bot wskarze ci gdzie wyrzucić odpad\n__rozkład - czas jaki rozkłada się dana rzecz\n__dell - usuwanie wiadowości```")
 
 def los(j):
     los = ""
