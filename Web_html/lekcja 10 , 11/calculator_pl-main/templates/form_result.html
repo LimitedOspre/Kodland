@@ -1,0 +1,38 @@
+<!-- Utwórz stronę wyświetlającą dane użytkownika -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+  >
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <link rel="stylesheet" href="../../static/css/style.css"> 
+  <title>Kalkulator efektywności energetycznej dla inteligentnych domów</title>
+</head>
+<body>
+  <header class="header">
+    <div class="header__text">
+      <h1>Oblicz efektywność energetyczną swojego domu!</h1>
+      <p>Wykaż inicjatywę i rozwiąż problem nadmiernego zużycia energii!</p>
+    </div>
+  </header>
+  <main>
+    {% block content %}
+    <h1> twoje dane zostaly zapisane</h1>
+    <div></div>
+    <p>oto informacje które podaleś</p>
+    <ul>
+        <li>imię i nazwisko: {{ name }}</li>
+        <li>adres e-mail: {{ email }}</li>
+        <li>adres: {{ address }}</li>
+        <li>termin wizyty: {{ date }}</li>
+    </ul>
+    {% endblock %}
+  </main>
+  <footer>
+
+  </footer>
+</body>
+</html>

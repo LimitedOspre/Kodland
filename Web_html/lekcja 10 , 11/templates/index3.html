@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </style>
+</head>
+<body>
+    <h1>Hello {{name}}</h1>
+    <ul>
+        {% for i in lista %}
+            <li>{{i}}</li>
+        {% endfor %}
+    </ul>
+    <table>
+        <tr>
+            <th>Color</th>
+            <th>:</th>
+        </tr>
+        {% for i in slownik %}
+            <tr>
+                <td>{{i}}</td>
+                <td>{{slownik[i]}}</td>
+            </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

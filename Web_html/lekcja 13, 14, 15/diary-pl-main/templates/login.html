@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dziennik programisty</title>
+    <link rel="stylesheet" href="../static/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <img src="../static/img/logo.svg" alt="logo" width="30" height="30">
+        <ul class="main-list">
+
+        </ul>
+      </header>
+      <main class="main-login">
+        {% block content %}
+        <form action="{{ url_for('login') }}" method="POST" class="login">
+            <p class="error">{{error}}</p>
+
+            <!-- Zadanie nr 2. Utwórz pola logowania -->
+            <label for="email" class="form__label">
+              <input type="text" name="email" id="email" class="form__input" placeholder="Email">
+            </label>
+            <label for="password" class="form__label">
+              <input type="password" name="password" id="password" class="form__input" placeholder="Hasło">
+            </label>
+            
+
+            <!--  -->
+                <button class="form__button">Zaloguj się</button>
+                <a href="/reg" class="form__button reg__link">Zarejestruj się</a>
+        </form>
+        {% endblock %}
+      </main>
+</body>
+</html>
