@@ -2,9 +2,12 @@ import discord
 from discord.ext import commands
 from time import time
 from rembg import remove
-import os
-import aiohttp
 from imageai.Detection import ObjectDetection
+import requests
+import os
+from random import randint
+import aiohttp
+
 
 detector = ObjectDetection() # Inicjalizacja detektora obiektów
 
@@ -14,7 +17,8 @@ intents.message_content = True
 plik = open("token.txt") # Otwieranie pliku z tokenem
 token = plik.read() # Wczytywanie tokena z pliku
 bot = commands.Bot(command_prefix="__", intents=intents) # Prefix komend bota
-weather_api_key = "__TOKEN__"
+weather_api_key = "__WEATHER_TOKEN__"
+News_api_key = "__NEWS_TOKEN__"
 
 # Zalogowanie na bota
 @bot.event
@@ -58,7 +62,7 @@ async def oblicz(ctx, a: int, operacja: str, b: int):
         await ctx.send(f"Potęga {a} ^ {b} = {a**b}")
 
 @bot.command() # Komenda do obliczania pierwiastka
-async def pierwiastek(ctx, a: int):
+async def pierwiastek(ctx, a: int, b: int = 2): # Domyślnie pierwiastek kwadratowy
     if a < 0:
         await ctx.send("Nie można obliczyć pierwiastka z liczby ujemnej!")
     else:
@@ -91,11 +95,12 @@ async def helpp(ctx):
                        "__pierwiastek x - pierwiastek\n"
                        "__srednia [x...] - średnia arytmetyczna\n"
                        "__czas - bot wskarze ci obecny czas\n"
-                       "__dell x - usunięcie x wiadomości\n"
                        "__za x (min lub h lub dni) - bot wystartuje minutnik na daną ilość czasu\n"
                        "__usuń_tło - bot usunie tło z obrazka\n"
                        "__detekcja - bot wykryje obiekty na obrazku\n"
                        "__pogoda - bot wyświetli pogodę w danym mieście\n"
+                       "__news [temat] - bot wyświetli losowe newsy\n"
+                       "__dell x - usunięcie x wiadomości\n"
                        "```",
         color=0x24a2b3)
     embed.set_thumbnail(url="https://raw.githubusercontent.com/LimitedOspre/Kodland/refs/heads/main/wired-outline-1330-rest-api-hover-machine.png") # Ustawienie miniaturki
@@ -166,7 +171,7 @@ async def usuń_tło(ctx): # Komenda do usuwania tła z obrazka
             if resp.status == 200: # Sprawdzenie czy plik został pobrany poprawnie
                 with open(input_path, 'wb') as f: # Otwieranie pliku do zapisu
                     f.write(await resp.read())
-                await ctx.send("Obrazek jest przetwarzny, czekaj chwilę...") # Wysyłanie wiadomości o tym że obrazek jest przerabiany
+                await ctx.send("Obrazek jest przetwarzny, poczekaj chwilę...") # Wysyłanie wiadomości o tym że obrazek jest przerabiany
 
     try:
         # Usunięcie tła za pomocą rembg
@@ -236,7 +241,7 @@ async def detekcja(ctx): # Komenda do detekcji obiektów na obrazku
             if resp.status == 200: # Sprawdzenie czy plik został pobrany poprawnie
                 with open(input_path, 'wb') as f: # Otwieranie pliku do zapisu
                     f.write(await resp.read())
-                await ctx.send("Obrazek jest przetwarzny, czekaj chwilę...") # Wysyłanie wiadomości o tym że obrazek jest przerabiany
+                await ctx.send("Obrazek jest przetwarzny, poczekaj chwilę...") # Wysyłanie wiadomości o tym że obrazek jest przerabiany
 
     try:
         # detekcja obiektów za pomocą imageai
@@ -251,7 +256,7 @@ async def detekcja(ctx): # Komenda do detekcji obiektów na obrazku
                 except Exception as e:
                     print(f"Błąd dodawania reakcji: {e}")
                 if not detected_items == []:
-                    await ctx.send("Wykryte obiekty:" + " ,".join(detected_items))
+                    await ctx.send("Wykryte obiekty:" + ", ".join(detected_items))
                 else:
                     await ctx.send("Nie wykryto żadnych obiektów.")
         except FileNotFoundError:
@@ -268,6 +273,9 @@ async def detekcja(ctx): # Komenda do detekcji obiektów na obrazku
 
 @bot.command()
 async def pogoda(ctx: commands.Context, miasto: str = "Warsaw"): # Komenda do wyświetlania pogody w danym mieście
+    messages = [message async for message in ctx.channel.history(limit=1)] # Pobieranie wiadomości z kanału
+    for message in messages: # Pętla do usuwania wiadomości
+        await message.delete() # Usuwanie wiadomości z komendą "__pogoda"
     url = "http://api.weatherapi.com/v1/current.json" # Adres API do pobierania pogody
     params = {
         "key": weather_api_key,
@@ -292,7 +300,50 @@ async def pogoda(ctx: commands.Context, miasto: str = "Warsaw"): # Komenda do wy
             embed.add_field(name="Wiatr", value=f"{wind_kph} km/h / {wind_mph} mph")
             embed.add_field(name="Warunki", value=condition)
             embed.set_thumbnail(url=image_url)
-            await ctx.send(embed=embed)
+            message = await ctx.send(embed=embed)
+    try:
+        await message.add_reaction("👍")
+        await message.add_reaction("👎")
+    except Exception as e:
+        print(f"Błąd dodawania reakcji: {e}")
+
+@bot.command(name="news") # Komenda do wyświetlania newsów
+async def news(ctx, *, query="technology"): # Komenda do wyświetlania pogody w danym mieście
+    url = f'https://newsapi.org/v2/everything?q={query}&apiKey={News_api_key}&language=pl&pageSize=5'
+    response = requests.get(url)
+    if response.status_code != 200:
+        await ctx.send("Nie udało się pobrać żadnych newsów.")
+        return
+    news_data = response.json()
+    articles = news_data["articles"]
+
+    if not articles:
+        await ctx.send("Nie znaleziono żadnych newsów.")
+        return
+    news_message = f"**Oto najnowsze newsy o {query}:**\n"
+    for o, article in enumerate(articles, start=randint(1, 5)):
+        embed = discord.Embed(
+            title=f"news o {query}",
+            description=news_message,
+            url=article["url"],
+            color=discord.Color.blue()
+        )
+        embed.add_field(name="Author", value=article["author"])
+        embed.add_field(name="Tytuł", value=article["title"])
+        embed.add_field(name="Opis", value=article["description"])
+        embed.add_field(name="Data publikacji", value=article["publishedAt"])
+        embed.add_field(name="Źródło", value=article["source"]["name"])
+        embed.add_field(name="Link do artykułu", value=article["url"])
+
+        if article["urlToImage"]:
+            embed.set_image(url=article["urlToImage"])
+        message = await ctx.send(embed=embed)
+        break
+    try:
+        await message.add_reaction("👍")
+        await message.add_reaction("👎")
+    except Exception as e:
+        print(f"Błąd dodawania reakcji: {e}")
 
 bot.run(token) # Uruchomienie bota
 plik.close() # Zamknięcie pliku z tokenem
