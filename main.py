@@ -98,6 +98,7 @@ async def helpp(ctx):
                        "__za x (min lub h lub dni) - bot wystartuje minutnik na daną ilość czasu\n"
                        "__usuń_tło - bot usunie tło z obrazka\n"
                        "__detekcja - bot wykryje obiekty na obrazku\n"
+                       "__scrap - bot wyświetli skrypt html z danej strony\n"
                        "__pogoda - bot wyświetli pogodę w danym mieście\n"
                        "__news [temat] - bot wyświetli losowe newsy\n"
                        "__dell x - usunięcie x wiadomości\n"
@@ -270,6 +271,26 @@ async def detekcja(ctx): # Komenda do detekcji obiektów na obrazku
             os.remove(input_path)
         if os.path.exists(output_path):
             os.remove(output_path)
+
+@bot.command() # Komenda do wyświetlania skrypty html
+async def scrap(ctx, url: str): # Komenda do wyświetlania skryptu html
+    messages = [message async for message in ctx.channel.history(limit=1)] # Pobieranie wiadomości z kanału
+    for message in messages: # Pętla do usuwania wiadomości
+        await message.delete() # Usuwanie wiadomości z komendą "__scrap"
+    response = requests.get(url) # Pobieranie strony
+    if response.status_code != 200: # Sprawdzenie czy strona została pobrana poprawnie
+        await ctx.send("Nie udało się pobrać strony.")
+        return
+    bs = BeautifulSoup(response.text, "lxml") # Parsowanie strony
+    file_path = "./temp/scraped_page.html"
+    with open(file_path, "w", encoding="utf-8") as f:
+            f.write(bs.prettify()) # Zapisanie skryptu html do pliku
+    message = await ctx.send("Oto skrypt html:", file=discord.File(file_path)) # Wysyłanie pliku na discord
+    try:
+        await message.add_reaction("👍")
+        await message.add_reaction("👎")
+    except Exception as e:
+        print(f"Błąd dodawania reakcji: {e}")
 
 @bot.command()
 async def pogoda(ctx: commands.Context, miasto: str = "Warsaw"): # Komenda do wyświetlania pogody w danym mieście
