@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from discord import app_commands
 from time import time
 from rembg import remove
 from imageai.Detection import ObjectDetection
@@ -7,23 +8,34 @@ import requests
 import os
 from random import randint
 import aiohttp
+from bs4 import BeautifulSoup
 
 
 detector = ObjectDetection() # Inicjalizacja detektora obiektów
 
-# Podstawowe ustawienia bota
+# Ustawienia bota
 intents = discord.Intents.default() # Ustawienia intencji bota
 intents.message_content = True
+intents.messages = True
+intents.guilds = True
+intents.reactions = True
+bot = commands.Bot(command_prefix="__", intents=intents) # Prefix komend bota
+
 plik = open("token.txt") # Otwieranie pliku z tokenem
 token = plik.read() # Wczytywanie tokena z pliku
-bot = commands.Bot(command_prefix="__", intents=intents) # Prefix komend bota
-weather_api_key = "__WEATHER_TOKEN__"
-News_api_key = "__NEWS_TOKEN__"
+
+weather_api_key = "ed445cb9e2fc4ce0896163833253004"
+News_api_key = "012df12f9019467394e9bb136d31e14c"
 
 # Zalogowanie na bota
 @bot.event
 async def on_ready():
     print(f"Zalogowano jako {bot.user.name}")
+    try:
+        synced = await bot.tree.sync()  
+        print(f"Zsynchronizowano {len(synced)} komend")
+    except Exception as e:
+        print(f"Błąd synchronizacji: {e}")
 
 @bot.command()
 async def ping(ctx):
@@ -99,9 +111,9 @@ async def helpp(ctx):
                        "__usuń_tło - bot usunie tło z obrazka\n"
                        "__detekcja - bot wykryje obiekty na obrazku\n"
                        "__scrap - bot wyświetli skrypt html z danej strony\n"
-                       "__pogoda - bot wyświetli pogodę w danym mieście\n"
-                       "__news [temat] - bot wyświetli losowe newsy\n"
                        "__dell x - usunięcie x wiadomości\n"
+                       "/pogoda [Miasto] - bot wyświetli pogodę w danym mieście\n"
+                       "/news [Temat] - bot wyświetli losowe newsy\n"
                        "```",
         color=0x24a2b3)
     embed.set_thumbnail(url="https://raw.githubusercontent.com/LimitedOspre/Kodland/refs/heads/main/wired-outline-1330-rest-api-hover-machine.png") # Ustawienie miniaturki
@@ -239,7 +251,7 @@ async def detekcja(ctx): # Komenda do detekcji obiektów na obrazku
     # Pobieranie pliku
     async with aiohttp.ClientSession() as session: # Użycie aiohttp do pobrania pliku
         async with session.get(attachment.url) as resp: # Pobieranie pliku
-            if resp.status == 200: # Sprawdzenie czy plik został pobrany poprawnie
+            if resp.status == 200: # Sprawdzenie czy plik jest dostępny
                 with open(input_path, 'wb') as f: # Otwieranie pliku do zapisu
                     f.write(await resp.read())
                 await ctx.send("Obrazek jest przetwarzny, poczekaj chwilę...") # Wysyłanie wiadomości o tym że obrazek jest przerabiany
@@ -281,22 +293,23 @@ async def scrap(ctx, url: str): # Komenda do wyświetlania skryptu html
     if response.status_code != 200: # Sprawdzenie czy strona została pobrana poprawnie
         await ctx.send("Nie udało się pobrać strony.")
         return
-    bs = BeautifulSoup(response.text, "lxml") # Parsowanie strony
+    bs = BeautifulSoup(response.text, "lxml") # Pobieranie skryptu strony
     file_path = "./temp/scraped_page.html"
     with open(file_path, "w", encoding="utf-8") as f:
             f.write(bs.prettify()) # Zapisanie skryptu html do pliku
-    message = await ctx.send("Oto skrypt html:", file=discord.File(file_path)) # Wysyłanie pliku na discord
     try:
+        message = await ctx.send("Oto skrypt html:", file=discord.File(file_path)) # Wysyłanie pliku na discord
         await message.add_reaction("👍")
         await message.add_reaction("👎")
     except Exception as e:
         print(f"Błąd dodawania reakcji: {e}")
+    finally:
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
-@bot.command()
-async def pogoda(ctx: commands.Context, miasto: str = "Warsaw"): # Komenda do wyświetlania pogody w danym mieście
-    messages = [message async for message in ctx.channel.history(limit=1)] # Pobieranie wiadomości z kanału
-    for message in messages: # Pętla do usuwania wiadomości
-        await message.delete() # Usuwanie wiadomości z komendą "__pogoda"
+@bot.tree.command(name="pogoda") # Komenda do wyświetlania pogody
+async def pogoda(interaction: discord.Interaction, miasto: str = "Warsaw"): # Komenda do wyświetlania pogody w danym mieście
+    """Pobiera pogodę z API WeatherAPI i wysyła wiadomość z danymi o pogodzie."""
     url = "http://api.weatherapi.com/v1/current.json" # Adres API do pobierania pogody
     params = {
         "key": weather_api_key,
@@ -321,25 +334,27 @@ async def pogoda(ctx: commands.Context, miasto: str = "Warsaw"): # Komenda do wy
             embed.add_field(name="Wiatr", value=f"{wind_kph} km/h / {wind_mph} mph")
             embed.add_field(name="Warunki", value=condition)
             embed.set_thumbnail(url=image_url)
-            message = await ctx.send(embed=embed)
+            message = await interaction.response.send_message(embed=embed, ephemeral=False)
+    sent_message = await interaction.original_response()
     try:
-        await message.add_reaction("👍")
-        await message.add_reaction("👎")
+        await sent_message.add_reaction("👍")
+        await sent_message.add_reaction("👎")
     except Exception as e:
         print(f"Błąd dodawania reakcji: {e}")
 
-@bot.command(name="news") # Komenda do wyświetlania newsów
-async def news(ctx, *, query="technology"): # Komenda do wyświetlania pogody w danym mieście
+@bot.tree.command(name="news") # Komenda do wyświetlania newsów
+async def news(interaction: discord.Interaction, query: str ="technology"): # Komenda do wyświetlania newsów
+    """Pobiera newsy z API NewsAPI i wysyła wiadomość z danymi o newsach."""
     url = f'https://newsapi.org/v2/everything?q={query}&apiKey={News_api_key}&language=pl&pageSize=5'
     response = requests.get(url)
     if response.status_code != 200:
-        await ctx.send("Nie udało się pobrać żadnych newsów.")
+        await interaction.response.send_message("Nie udało się pobrać żadnych newsów.", ephemeral=False)
         return
     news_data = response.json()
     articles = news_data["articles"]
 
     if not articles:
-        await ctx.send("Nie znaleziono żadnych newsów.")
+        await interaction.response.send_message("Nie znaleziono żadnych newsów.", ephemeral=False)
         return
     news_message = f"**Oto najnowsze newsy o {query}:**\n"
     for o, article in enumerate(articles, start=randint(1, 5)):
@@ -349,7 +364,7 @@ async def news(ctx, *, query="technology"): # Komenda do wyświetlania pogody w 
             url=article["url"],
             color=discord.Color.blue()
         )
-        embed.add_field(name="Author", value=article["author"])
+        embed.add_field(name="Autor", value=article["author"])
         embed.add_field(name="Tytuł", value=article["title"])
         embed.add_field(name="Opis", value=article["description"])
         embed.add_field(name="Data publikacji", value=article["publishedAt"])
@@ -358,11 +373,12 @@ async def news(ctx, *, query="technology"): # Komenda do wyświetlania pogody w 
 
         if article["urlToImage"]:
             embed.set_image(url=article["urlToImage"])
-        message = await ctx.send(embed=embed)
+        message = await interaction.response.send_message(embed=embed, ephemeral=False)
         break
+    sent_message = await interaction.original_response()
     try:
-        await message.add_reaction("👍")
-        await message.add_reaction("👎")
+        await sent_message.add_reaction("👍")
+        await sent_message.add_reaction("👎")
     except Exception as e:
         print(f"Błąd dodawania reakcji: {e}")
 
